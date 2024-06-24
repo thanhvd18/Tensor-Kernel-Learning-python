@@ -62,7 +62,7 @@ class KL:
                                       
   def predict(self, X_test):
       X = np.vstack([self.X_train, X_test])
-      index_train = np.array(range(X_train.shape[0]))
+      index_train = np.array(range(self.X_train.shape[0]))
       index_test =  len(index_train) + np.array(range(X_test.shape[0]))
       K = self.get_kernel_matrix(X)
       

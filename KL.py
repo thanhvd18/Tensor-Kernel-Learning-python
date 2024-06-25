@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
 
 
 class KL:
@@ -49,11 +50,11 @@ class KL:
     return K
 
 
-  def fit(self, X_train, y_train,random_state=0,indices=None):
-    from sklearn.ensemble import RandomForestClassifier
-    
+  def fit(self, X_train, y_train,random_state=0,indices=None,val_size=0):
+    if val_size > 0:
+      X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_size, random_state=random_state)
       # Create a Random Forest classifier
-    self.rf_classifier = RandomForestClassifier(n_estimators=self.n_trees, random_state=42)
+    self.rf_classifier = RandomForestClassifier(n_estimators=self.n_trees, random_state=random_state)
                                         #  max_features=5,
                                         #  max_depth=5
     self.rf_classifier.fit(X_train,y_train)

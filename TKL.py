@@ -28,63 +28,155 @@ class TKL:
         # self.X_train_list = []
         # self.K_list = None
 
-    def fit(self, X_train_list, y_train):
+    def fit(self, X_train_list, y_train,val_size=0):
         self.KL_list = []
         self.X_train_list = []
         self.n_modalities = len(X_train_list)
         for X_train in X_train_list:
+            # train one model for each modality to create kernel matrix K
             self.X_train_list.append(X_train)
-            KL_i = KL()
-            KL_i.fit(X_train,y_train)
+            KL_i = KL() # kernel learning
+            KL_i.fit(X_train,y_train,val_size=val_size)
             self.KL_list.append(KL_i)
-            
+            # K_train = KL_i.get_kernel_matrix(X_train)
+            # self.K_train_list.append(K_train) 
         self.y_train = y_train
-                
-    def predict_individual_multimodal(self, X_test_list):
-        result = []
+        
+             
+    def predict(self,X_test_list):
         self.K_list = []
+        K_ten = []
+        index_train = np.array(range(self.X_train_list[0].shape[0]))
+        index_test =  len(index_train) + np.array(range(X_test_list[0].shape[0]))
         for i,X_test in enumerate(X_test_list):
             X = np.vstack([self.X_train_list[i], X_test])
-            index_train = np.array(range(self.X_train_list[i].shape[0]))
-            index_test =  len(index_train) + np.array(range(X_test.shape[0]))
-            # ic(i, len())
             K = self.KL_list[i].get_kernel_matrix(X)
-            self.K_list.append( K)
-            
-            K_train = K[np.ix_(index_train,index_train)]
-            K_test = K[np.ix_(index_test,index_train)]
-            
-            clf = SVC(kernel='precomputed') 
-            clf.fit(K_train, self.y_train)
-            y_pred = clf.predict(K_test)
-            result.append({f"modality": i, "y": y_pred})
-        return result
-        
-    def TKL_train(self):
-        
-        K_X = np.copy(np.array(self.K_list))
-        K_ten = parafac(K_X, rank=2, tol=1e-9,n_iter_max=1000,init='random')
-        
+            K_ten.append(K)
+        K_ten = np.array(K_ten)
+        K_ten = parafac(K_ten, rank=2, tol=1e-9,n_iter_max=1000,init='random')
         K_ten = tl.cp_to_tensor(K_ten)
+        K_ten_dp = K_ten ## 
+        ## check this step
+        # K_ten_dp = cross_diffusion(K_ten, iterations=self.iterations, kNN=self.kNN)
+        
+        K_combine = np.sum(K_ten_dp,axis=0)
+        # K_combine = np.squeeze(K_ten[1:,:])
+        
+        K_combine = K_combine/ np.sqrt(np.linalg.norm(K_combine))
+        K_train = K_combine[np.ix_(index_train,index_train)]
+        K_test = K_combine[np.ix_(index_test,index_train)]
 
-        self.K_ten_dp = cross_diffusion(K_ten, iterations=self.iterations, kNN=self.kNN)
-
-    def predict_TKL(self, X_test_list):
-        result = []
+        clf = SVC(kernel='precomputed') 
+        clf.fit(K_train, self.y_train)
+        y_pred = clf.predict(K_test)
+        return y_pred
+    def predict_(self,X_test_list):
         self.K_list = []
+        K_ten = []
+        index_train = np.array(range(self.X_train_list[0].shape[0]))
+        index_test =  len(index_train) + np.array(range(X_test_list[0].shape[0]))
         for i,X_test in enumerate(X_test_list):
-            # X = np.vstack([self.X_train_list[i], X_test])
-            index_train = np.array(range(self.X_train_list[i].shape[0]))
-            index_test =  len(index_train) + np.array(range(X_test.shape[0]))
-            K = np.copy(self.K_ten_dp[i,:,:])
-            K = K/ np.sqrt(np.linalg.norm(K))
-            
-            K_train = K[np.ix_(index_train,index_train)]
-            K_test = K[np.ix_(index_test,index_train)]
-            
-            clf = SVC(kernel='precomputed') 
-            clf.fit(K_train, self.y_train)
-            y_pred = clf.predict(K_test)
-            result.append({f"modality": i, "y": y_pred})
-        return result
+            X = np.vstack([self.X_train_list[i], X_test])
+            K = self.KL_list[i].get_kernel_matrix(X)
+            K_ten.append(K)
+        K_ten_old = K_ten
+        K_ten = np.array(K_ten)
+        K_ten = parafac(K_ten, rank=2, tol=1e-9,n_iter_max=1000,init='random')
+        K_ten = tl.cp_to_tensor(K_ten)
+        # K_ten_dp = cross_diffusion(K_ten, iterations=self.iterations, kNN=self.kNN)
+        
+        # K_combine = np.sum(K_ten_dp,axis=0)
+        # # K_combine = np.squeeze(K_ten[1:,:])
+        
+        # K_combine = K_combine/ np.sqrt(np.linalg.norm(K_combine))
+        # K_train = K_combine[np.ix_(index_train,index_train)]
+        # K_test = K_combine[np.ix_(index_test,index_train)]
+
+        # clf = SVC(kernel='precomputed') 
+        # clf.fit(K_train, self.y_train)
+        # y_pred = clf.predict(K_test)
+        return 0,K_ten,K_ten_old,index_train,index_test
+    
+    def predict_summation(self,X_test_list):
+        self.K_list = []
+        K_ten = []
+        index_train = np.array(range(self.X_train_list[0].shape[0]))
+        index_test =  len(index_train) + np.array(range(X_test_list[0].shape[0]))
+        for i,X_test in enumerate(X_test_list):
+            X = np.vstack([self.X_train_list[i], X_test])
+            K = self.KL_list[i].get_kernel_matrix(X)
+            K_ten.append(K)
+        K_ten = np.array(K_ten)
+        # K_ten = parafac(K_ten, rank=2, tol=1e-9,n_iter_max=1000,init='random')
+        # K_ten = tl.cp_to_tensor(K_ten)
+        # K_ten_dp = K_ten ## 
+        # ## check this step
+        # K_ten_dp = cross_diffusion(K_ten, iterations=self.iterations, kNN=self.kNN)
+        
+        K_combine = np.sum(K_ten,axis=0)
+        # K_combine = np.squeeze(K_ten[1:,:])
+        
+        K_combine = K_combine/ np.sqrt(np.linalg.norm(K_combine))
+        K_train = K_combine[np.ix_(index_train,index_train)]
+        K_test = K_combine[np.ix_(index_test,index_train)]
+
+        clf = SVC(kernel='precomputed') 
+        clf.fit(K_train, self.y_train)
+        y_pred = clf.predict(K_test)
+        return y_pred
+    def predict_summation_TKL(self,X_test_list):
+        self.K_list = []
+        K_ten = []
+        index_train = np.array(range(self.X_train_list[0].shape[0]))
+        index_test =  len(index_train) + np.array(range(X_test_list[0].shape[0]))
+        for i,X_test in enumerate(X_test_list):
+            X = np.vstack([self.X_train_list[i], X_test])
+            K = self.KL_list[i].get_kernel_matrix(X)
+            K_ten.append(K)
+        K_ten = np.array(K_ten)
+        K_ten = parafac(K_ten, rank=2, tol=1e-9,n_iter_max=1000,init='random')
+        K_ten = tl.cp_to_tensor(K_ten)
+        # K_ten_dp = K_ten ## 
+        # ## check this step
+        # K_ten_dp = cross_diffusion(K_ten, iterations=self.iterations, kNN=self.kNN)
+        
+        K_combine = np.sum(K_ten,axis=0)
+        # K_combine = np.squeeze(K_ten[1:,:])
+        
+        K_combine = K_combine/ np.sqrt(np.linalg.norm(K_combine))
+        K_train = K_combine[np.ix_(index_train,index_train)]
+        K_test = K_combine[np.ix_(index_test,index_train)]
+
+        clf = SVC(kernel='precomputed') 
+        clf.fit(K_train, self.y_train)
+        y_pred = clf.predict(K_test)
+        return y_pred
+    
+    def predict_summation_DP(self,X_test_list):
+        self.K_list = []
+        K_ten = []
+        index_train = np.array(range(self.X_train_list[0].shape[0]))
+        index_test =  len(index_train) + np.array(range(X_test_list[0].shape[0]))
+        for i,X_test in enumerate(X_test_list):
+            X = np.vstack([self.X_train_list[i], X_test])
+            K = self.KL_list[i].get_kernel_matrix(X)
+            K_ten.append(K)
+        K_ten = np.array(K_ten)
+        # K_ten = parafac(K_ten, rank=2, tol=1e-9,n_iter_max=1000,init='random')
+        # K_ten = tl.cp_to_tensor(K_ten)
+        # K_ten_dp = K_ten ## 
+        # ## check this step
+        K_ten = cross_diffusion(K_ten, iterations=self.iterations, kNN=self.kNN)
+        
+        K_combine = np.sum(K_ten,axis=0)
+        # K_combine = np.squeeze(K_ten[1:,:])
+        
+        K_combine = K_combine/ np.sqrt(np.linalg.norm(K_combine))
+        K_train = K_combine[np.ix_(index_train,index_train)]
+        K_test = K_combine[np.ix_(index_test,index_train)]
+
+        clf = SVC(kernel='precomputed') 
+        clf.fit(K_train, self.y_train)
+        y_pred = clf.predict(K_test)
+        return y_pred
     

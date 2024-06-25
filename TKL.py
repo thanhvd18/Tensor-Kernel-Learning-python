@@ -39,7 +39,8 @@ class TKL:
             self.KL_list.append(KL_i)
             
         self.y_train = y_train
-                
+        
+             
     def predict_individual_multimodal(self, X_test_list):
         result = []
         self.K_list = []

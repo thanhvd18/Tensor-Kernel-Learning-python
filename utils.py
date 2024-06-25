@@ -72,8 +72,8 @@ def cross_diffusion(K_ten_, iterations,kNN=3):
 
     for _ in range(iterations):
       for i in range(m):
-        S_i = S_ten[i,:, :]
+        S_i = np.copy(S_ten[i,:, :])
         exclude_i = [j for j in range(m) if j != i]
         sum_K = np.sum(K_norm_ten[exclude_i,:, :], axis=0)
-        K_norm_ten[i,:, :] = S_i @ (1 / (m - 1) * sum_K) @ S_i.T
+        K_norm_ten[i,:, :] = np.copy(S_i @ (1 / (m - 1) * sum_K) @ S_i.T)
   return K_norm_ten

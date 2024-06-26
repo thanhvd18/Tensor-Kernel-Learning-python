@@ -69,7 +69,10 @@ class TKL:
         y_pred_summation = y_pred.copy()
     
         y_combine = np.hstack((self.y_train, y_pred))
-        idx_sorted = np.argsort(y_combine)
+        train_test_index = np.array() [0]*len(self.y_train) + [1]*len(y_pred))
+        idx_sorted = np.lexsort((train_test_index,y_combine))  # primary is the first sort key, secondary breaks ties
+
+        # idx_sorted = np.argsort(y_combine)
         inverse_idx = np.argsort(idx_sorted)
         
         K_ten_sorted  = np.zeros_like(K_ten)

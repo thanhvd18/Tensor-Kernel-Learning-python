@@ -12,22 +12,18 @@ import tensorly as tl
 from KL import KL
 from utils import *
   
-class TKL:
+class KernelSummation:
     """
-        Tensor kernel learning
+
     """
-    def __init__(self,n_modalities=None, n_class=2,kNN=3, iterations=5,n_tree=500):
+    def __init__(self,n_modalities=None, n_class=2,n_tree=500):
         self.n_class = n_class
-        self.kNN = kNN
-        self.iterations = iterations    
-        self.K_train = None
         self.X_train = None
         self.n_tree = n_tree
         self.KL_list = []
         self.n_modalities = n_modalities
         # self.X_train_list = []
         # self.K_list = None
-        self.K = None
 
     def fit(self, X_train_list, y_train,val_size=0):
         self.KL_list = []
@@ -77,30 +73,5 @@ class TKL:
             K_ten_sorted[i,:,:] = np.squeeze(K_ten[i,:,:])[np.ix_(idx_sorted,idx_sorted)]
         # plt.imshow(K_ten_shuffle[0,:,:])
         K_combine_summation = np.sum(K_ten_sorted,axis=0)
-        
-
-        K_ten = parafac(K_ten_sorted, rank=2, tol=1e-9,n_iter_max=1000,init='random')
-        K_ten = tl.cp_to_tensor(K_ten)
-        K_ten = cross_diffusion(K_ten,self.iterations,self.kNN)
-        
-        
-        K_ten_inverse  = np.zeros_like(K_ten)
-        for i in range(4):
-            K_ten_inverse[i,:,:] = np.squeeze(K_ten[i,:,:])[np.ix_(inverse_idx,inverse_idx)]
-            
-            
-        
-        K_combine = np.sum(K_ten_inverse,axis=0)
-        K_combine_sorted = np.sum(K_ten,axis=0)
-        # K_combine = np.squeeze(K_ten[1:,:])
-        
-        K_combine = K_combine/ np.sqrt(np.linalg.norm(K_combine))
-        K_train = K_combine[np.ix_(index_train,index_train)]
-        K_test = K_combine[np.ix_(index_test,index_train)]
-
-        clf = SVC(kernel='precomputed') 
-        clf.fit(K_train, self.y_train)
-        y_pred = clf.predict(K_test)
-        self.K = K_combine
-    
+        self.K = K_combine_summation
         return y_pred

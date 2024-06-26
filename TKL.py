@@ -43,7 +43,12 @@ class TKL:
         self.y_train = y_train
         
              
+<<<<<<< HEAD
     def predict(self,X_test_list):
+=======
+    def predict_individual_multimodal(self, X_test_list):
+        result = []
+>>>>>>> 37194af81f4e58706d6d60188507b0bdb9c02938
         self.K_list = []
         K_ten = []
         index_train = np.array(range(self.X_train_list[0].shape[0]))

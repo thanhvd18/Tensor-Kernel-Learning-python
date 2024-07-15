@@ -5,9 +5,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import RFE
+from sklearn.base import BaseEstimator
 
-
-class KL:
+class KL(BaseEstimator):
   
   '''
     Kernel learning: Random Forest + Kernel SVM
@@ -20,6 +21,15 @@ class KL:
     self.y_train = None
     self.X_train = None
   
+  def get_params(self, deep=True):
+    return dict(n_trees=self.n_trees)
+  
+  def set_params(self, **params):
+    for key, value in params.items():
+      setattr(self, key, value)
+    return self
+      
+
   def train_test_split(self, test_size=0.2, random_state=0):
     pass
   def get_kernel_matrix(self, X, y=None, index=None):
@@ -75,5 +85,21 @@ class KL:
       y_pred = clf.predict(K_test)
       return y_pred
     
-  def feature_selection(self):
-    pass
+  def feature_selection(self,X, y, n_features_to_select=75, step = 1):
+    '''
+      Feature selection using Random Forest
+      params:
+      estimator: Random Forest estimator
+      n_features_to_select: number of features to select
+      step: number of features to remove at each iteration
+    '''
+    
+    # RFE feature selection by removing the least important features
+    rf_classifier = RandomForestClassifier(n_estimators=self.n_trees)
+    selector = RFE(rf_classifier, n_features_to_select=n_features_to_select, step=step)
+    selector = selector.fit(X, y)
+
+    X_train_transformed = selector.transform(X)
+    
+    return X_train_transformed, selector
+  
